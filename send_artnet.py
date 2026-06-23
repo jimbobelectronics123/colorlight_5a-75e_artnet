@@ -38,10 +38,10 @@ def main():
 
     sock = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
     print(f"Sending Art-Net test patterns ({args.mode} mode) to {args.ip}:{args.port}...")
-    print(f"Driving {args.panels} logical panels (J1 to J{args.panels}) -> {args.panels * 36} universes total.")
+    print(f"Driving {args.panels} logical panels (J1 to J{args.panels}) -> {args.panels * 32} universes total.")
     print("Press Ctrl+C to stop.")
 
-    universes_per_panel = 36
+    universes_per_panel = 32
     total_universes = args.panels * universes_per_panel
     pixels_per_universe = 128 # 384 DMX channels
 
@@ -57,32 +57,6 @@ def main():
                 panel = u // universes_per_panel
                 local_u = u % universes_per_panel
                 
-                # Check if this universe should be skipped based on panel index (port index)
-                if panel < 7:
-                    # Standard 64x64 (J1-J7): uses 0-31, skips 32-35
-                    if local_u >= 32:
-                        continue
-                elif panel == 7:
-                    # Stacked/Chained 32x64 (J8): uses 0-15, skip 16, 17-32, skips 33-35
-                    if local_u == 16 or local_u >= 33:
-                        continue
-                elif panel == 8:
-                    # Chained 32x32 - 4 panels (J9): uses 0-7, skip 8, 9-16, skip 17, 18-25, skip 26, 27-34, skip 35
-                    if local_u in (8, 17, 26, 35):
-                        continue
-                elif panel == 9:
-                    # Chained 32x32 - 3 panels (J10): uses 0-7, skip 8, 9-16, skip 17, 18-25, skips 26-35
-                    if local_u in (8, 17) or local_u >= 26:
-                        continue
-                elif panel == 10:
-                    # Chained 32x32 - 2 panels (J11): uses 0-7, skip 8, 9-16, skips 17-35
-                    if local_u == 8 or local_u >= 17:
-                        continue
-                else:
-                    # Chained 32x32 - 1 panel (J12+): uses 0-7, skips 8-35
-                    if local_u >= 8:
-                        continue
-                
                 dmx_data = bytearray(384) # 128 pixels * 3 channels
                 
                 # Determine panel position in 3x3 grid for unified mode
@@ -90,20 +64,8 @@ def main():
                     panel_col = panel % 3
                     panel_row = panel // 3
                 
-                # Determine local_u offset for pixel coordinates mapping
-                if panel < 7:
-                    coord_local_u = local_u
-                elif panel == 7:
-                    coord_local_u = local_u if local_u < 16 else (local_u - 1)
-                else:  # panel 8+ (Chained 32x32)
-                    if local_u < 8:
-                        coord_local_u = local_u
-                    elif local_u < 17:
-                        coord_local_u = local_u - 1
-                    elif local_u < 26:
-                        coord_local_u = local_u - 2
-                    else:
-                        coord_local_u = local_u - 3
+                # Under the 32-universe system, there are no gaps
+                coord_local_u = local_u
                 
                 for p in range(pixels_per_universe):
                     global_pixel_idx = coord_local_u * pixels_per_universe + p
