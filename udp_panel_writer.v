@@ -189,13 +189,73 @@ module udp_panel_writer (
                     if (udp_source_valid) begin
                         dmx_channel_cnt <= dmx_channel_cnt + 1;
                         
-                        // IP Address override via Universe 969
-                        if (panel_id_reg == 8'd26 && local_universe_reg == 8'd33) begin
+                        // Config and IP override via Universe 666
+                        if (universe == 15'd666) begin
                             case (dmx_channel_cnt)
                                 16'd0: cfg_board_ip[31:24] <= udp_source_data[7:0];
                                 16'd1: cfg_board_ip[23:16] <= udp_source_data[7:0];
                                 16'd2: cfg_board_ip[15:8]  <= udp_source_data[7:0];
                                 16'd3: cfg_board_ip[7:0]   <= udp_source_data[7:0];
+                                
+                                // J1
+                                16'd4: cfg_panel_type[0]     <= udp_source_data[1:0];
+                                16'd5: cfg_max_active_y[0]   <= udp_source_data[5:0];
+                                16'd6: cfg_start_active_x[0] <= udp_source_data[7:0];
+                                
+                                // J2
+                                16'd7: cfg_panel_type[1]     <= udp_source_data[1:0];
+                                16'd8: cfg_max_active_y[1]   <= udp_source_data[5:0];
+                                16'd9: cfg_start_active_x[1] <= udp_source_data[7:0];
+                                
+                                // J3
+                                16'd10: cfg_panel_type[2]     <= udp_source_data[1:0];
+                                16'd11: cfg_max_active_y[2]   <= udp_source_data[5:0];
+                                16'd12: cfg_start_active_x[2] <= udp_source_data[7:0];
+                                
+                                // J4
+                                16'd13: cfg_panel_type[3]     <= udp_source_data[1:0];
+                                16'd14: cfg_max_active_y[3]   <= udp_source_data[5:0];
+                                16'd15: cfg_start_active_x[3] <= udp_source_data[7:0];
+                                
+                                // J5
+                                16'd16: cfg_panel_type[4]     <= udp_source_data[1:0];
+                                16'd17: cfg_max_active_y[4]   <= udp_source_data[5:0];
+                                16'd18: cfg_start_active_x[4] <= udp_source_data[7:0];
+                                
+                                // J6
+                                16'd19: cfg_panel_type[5]     <= udp_source_data[1:0];
+                                16'd20: cfg_max_active_y[5]   <= udp_source_data[5:0];
+                                16'd21: cfg_start_active_x[5] <= udp_source_data[7:0];
+                                
+                                // J7
+                                16'd22: cfg_panel_type[6]     <= udp_source_data[1:0];
+                                16'd23: cfg_max_active_y[6]   <= udp_source_data[5:0];
+                                16'd24: cfg_start_active_x[6] <= udp_source_data[7:0];
+                                
+                                // J8
+                                16'd25: cfg_panel_type[7]     <= udp_source_data[1:0];
+                                16'd26: cfg_max_active_y[7]   <= udp_source_data[5:0];
+                                16'd27: cfg_start_active_x[7] <= udp_source_data[7:0];
+                                
+                                // J9
+                                16'd28: cfg_panel_type[8]     <= udp_source_data[1:0];
+                                16'd29: cfg_max_active_y[8]   <= udp_source_data[5:0];
+                                16'd30: cfg_start_active_x[8] <= udp_source_data[7:0];
+                                
+                                // J10
+                                16'd31: cfg_panel_type[9]     <= udp_source_data[1:0];
+                                16'd32: cfg_max_active_y[9]   <= udp_source_data[5:0];
+                                16'd33: cfg_start_active_x[9] <= udp_source_data[7:0];
+                                
+                                // J11
+                                16'd34: cfg_panel_type[10]    <= udp_source_data[1:0];
+                                16'd35: cfg_max_active_y[10]  <= udp_source_data[5:0];
+                                16'd36: cfg_start_active_x[10]<= udp_source_data[7:0];
+                                
+                                // J12
+                                16'd37: cfg_panel_type[11]    <= udp_source_data[1:0];
+                                16'd38: cfg_max_active_y[11]  <= udp_source_data[5:0];
+                                16'd39: cfg_start_active_x[11]<= udp_source_data[7:0];
                             endcase
                         end
                         
@@ -234,19 +294,9 @@ module udp_panel_writer (
     reg [5:0] cfg_max_active_y [0:`NUM_ACTIVE_PORTS-1];
     reg [7:0] cfg_start_active_x [0:`NUM_ACTIVE_PORTS-1];
 
-    wire [7:0]  next_panel_id = universe / 15'd36;
-    wire [5:0]  next_local_u  = universe % 15'd36;
-    wire [1:0]  next_type     = cfg_panel_type[next_panel_id];
-    wire [15:0] next_offset   = (next_type == 2'd3) ? (
-                                    ({10'b0, (next_local_u < 8) ? next_local_u :
-                                             (next_local_u < 17) ? (next_local_u - 6'd1) :
-                                             (next_local_u < 26) ? (next_local_u - 6'd2) :
-                                                                   (next_local_u - 6'd3)} << 7)
-                                ) : (next_type == 2'd1) ? (
-                                    (next_local_u < 16) ? ({10'b0, next_local_u} << 7) : ({10'b0, next_local_u - 6'd1} << 7)
-                                ) : (
-                                    {10'b0, next_local_u} << 7
-                                );
+    wire [7:0]  next_panel_id = universe >> 5;           // universe / 32
+    wire [5:0]  next_local_u  = {1'b0, universe[4:0]};   // universe % 32
+    wire [15:0] next_offset   = {10'b0, next_local_u} << 7;
 
     wire [15:0] target_write_addr = (cfg_panel_type[panel_id_reg] == 2'd3) ? (
                                         {4'b0, global_pixel[10], global_pixel[9:5], global_pixel[11], global_pixel[4:0]}
@@ -268,23 +318,6 @@ module udp_panel_writer (
         end
     end
 
-    // Universe activity mask per port
-    reg [35:0] universe_active_mask [0:`NUM_ACTIVE_PORTS-1];
-
-    // Timer to reset the mask window (~1.25 seconds at 125 MHz clock)
-    reg [27:0] reset_timer;
-    always @(posedge clock) begin
-        if (reset) begin
-            reset_timer <= 0;
-        end else begin
-            if (reset_timer < 27'd156250000) begin
-                reset_timer <= reset_timer + 1;
-            end else begin
-                reset_timer <= 0;
-            end
-        end
-    end
-
     integer p_idx;
     always @(posedge clock) begin
         if (reset) begin
@@ -296,63 +329,6 @@ module udp_panel_writer (
                 cfg_panel_type[p_idx]     <= (p_idx >= 7) ? 2'd1 : 2'd0; // stacked (1) on J8-J12, standard (0) on J1-J7
                 cfg_max_active_y[p_idx]   <= (p_idx >= 7) ? 6'd16 : 6'd32;
                 cfg_start_active_x[p_idx] <= (p_idx >= 7) ? 8'd0 : 8'd64; // Correct start active x default for stacked (0) vs standard (64)
-                universe_active_mask[p_idx] <= 36'b0;
-            end
-        end else begin
-            // Track active universes in mask on DMX payload receipt
-            if (state == STATE_DMX_DATA && udp_source_valid && panel_id_reg < `NUM_ACTIVE_PORTS && local_universe_reg < 36) begin
-                universe_active_mask[panel_id_reg][local_universe_reg] <= 1'b1;
-            end
-
-            // Process masks at the end of the timer window
-            if (reset_timer == 0) begin
-                for (p_idx = 0; p_idx < `NUM_ACTIVE_PORTS; p_idx = p_idx + 1) begin
-                    // 1. First check if it is Stacked 32x32 (up to 4 panels)
-                    if ((|universe_active_mask[p_idx][35:27] && !universe_active_mask[p_idx][26]) ||
-                        (|universe_active_mask[p_idx][25:18] && !universe_active_mask[p_idx][17]) ||
-                        (|universe_active_mask[p_idx][16:9]  && !universe_active_mask[p_idx][8])) begin
-                        
-                        cfg_panel_type[p_idx]   <= 2'd3;
-                        cfg_max_active_y[p_idx] <= 6'd16;
-                        
-                        if (|universe_active_mask[p_idx][35:27]) begin
-                            cfg_start_active_x[p_idx] <= 8'd0;   // 4 panels (32x128)
-                        end else if (|universe_active_mask[p_idx][25:18]) begin
-                            cfg_start_active_x[p_idx] <= 8'd32;  // 3 panels (32x96)
-                        end else begin
-                            cfg_start_active_x[p_idx] <= 8'd64;  // 2 panels (32x64)
-                        end
-                    end
-                    // 2. Otherwise, check for 64x64 or Stacked/Chained 32x64
-                    else if (|universe_active_mask[p_idx][35:17]) begin
-                        if (universe_active_mask[p_idx][16]) begin
-                            // Standard 64x64 (1/32 scan)
-                            cfg_panel_type[p_idx]     <= 2'd0;
-                            cfg_max_active_y[p_idx]   <= 6'd32;
-                            cfg_start_active_x[p_idx] <= 8'd64;
-                        end else begin
-                            // Stacked/Chained 32x64 (1/16 scan, behaves as 64x64 or 32x128)
-                            cfg_panel_type[p_idx]     <= 2'd1;
-                            cfg_max_active_y[p_idx]   <= 6'd16;
-                            cfg_start_active_x[p_idx] <= 8'd0;
-                        end
-                    end
-                    // 3. Otherwise, check for Standard 32x64
-                    else if (|universe_active_mask[p_idx][16:9]) begin
-                        cfg_panel_type[p_idx]     <= 2'd2;
-                        cfg_max_active_y[p_idx]   <= 6'd16;
-                        cfg_start_active_x[p_idx] <= 8'd64;
-                    end
-                    // 4. Otherwise, check for Standard 32x32
-                    else if (|universe_active_mask[p_idx][7:0]) begin
-                        cfg_panel_type[p_idx]     <= 2'd2;
-                        cfg_max_active_y[p_idx]   <= 6'd16;
-                        cfg_start_active_x[p_idx] <= 8'd96;
-                    end
-                    
-                    // Reset mask for the next window
-                    universe_active_mask[p_idx] <= 36'b0;
-                end
             end
         end
     end
